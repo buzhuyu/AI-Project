@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: ai_nexus_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/sql_app.db:/app/sql_app.db # Persist SQLite DB
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+
+  frontend:
+    build: ./frontend
+    container_name: ai_nexus_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # In Docker, localhost refers to the container itself. 
+      # Browser runs on host, so public API URL should be reachable from browser.
+      # But SSR fetch needs to reach backend container.
+      # For simple setup, we assume client-side fetch calls localhost:8000 (host machine).
+      # If you deploy to server, change this to your domain/IP.
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend

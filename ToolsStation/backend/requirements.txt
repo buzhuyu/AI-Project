@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+requests
+beautifulsoup4
+lxml
+python-dotenv
+loguru
+httpx
+wechatpy[cryptography]
+apscheduler
+sqlalchemy
