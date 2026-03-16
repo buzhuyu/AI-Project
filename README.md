@@ -1,127 +1,62 @@
-# AI-Project
+# AI Project Collection (AI 应用集合)
 
-一个专注于人工智能应用开发的综合项目库，提供实用的 AI 工具、算法实现和最佳实践范例。
+一个专注于人工智能应用开发的综合项目库，汇集了多个实用的 AI 工具、算法实现和最佳实践范例。本项目旨在探索 AI 智能体（Agent）在不同领域的应用潜力。
 
-## 📁 项目结构
+## 📁 项目列表
 
-```
-AI-Project/
-├── README.md                # 项目说明文档
-└── ToolsStation/            # AI 工具集合与应用系统
-    ├── README.md            # ToolsStation 详细文档
-    ├── backend/             # 后端服务代码
-    ├── frontend/            # 前端应用代码
-    ├── DEPLOY.md            # 部署指南
-    ├── docker-compose.yml   # Docker 容器编排
-    └── 其他配置文件
-```
+本项目目前包含以下核心模块：
 
-## 🎯 核心模块
+### 1. 🤖 [AI Novel Generator (AI 小说生成器)](./AI_Novel/README.md)
 
-### 📦 ToolsStation - AI 工具集合
+一个基于多智能体（Multi-Agent）协作的自动化小说创作平台。
+- **核心功能**: 大纲生成、章节创作、自动润色、世界观管理。
+- **技术栈**: React, TypeScript, Vite, Supabase, Express, OpenAI SDK.
+- **亮点**: 沉浸式流式生成体验，支持风格模仿和伏笔管理。
 
-**ToolsStation** 是本项目的核心工具库，提供完整的 AI 应用系统：
+### 2. 📰 [AI Tools Station (AI 资讯站)](./ToolsStation/README.md)
 
-- **🖥️ 后端服务** - 高效的 API 服务和业务逻辑处理
-- **🎨 前端应用** - 现代化的用户交互界面
-- **🐳 容器化部署** - 基于 Docker 的一键启动部署
-- **📊 数据处理** - 强大的数据管理和分析能力
-
-详细信息请查看 [ToolsStation/README.md](./ToolsStation/README.md)
+一个现代化的科技资讯聚合与推送平台。
+- **核心功能**: 多源资讯抓取、LLM 智能摘要、多渠道（飞书/微信）推送。
+- **技术栈**: FastAPI, Next.js, SQLAlchemy, APScheduler.
+- **亮点**: 自动化每日简报，前后端分离架构。
 
 ## 🚀 快速开始
 
-### 方式一：使用 Docker（推荐）
+请进入各个子目录查看详细的安装和运行指南：
 
-```bash
-git clone https://github.com/buzhuyu/AI-Project.git
-cd AI-Project/ToolsStation
-docker-compose up -d
+- **AI Novel Generator**: [查看文档](./AI_Novel/README.md)
+- **AI Tools Station**: [查看文档](./ToolsStation/README.md)
+
+## 📂 目录结构
+
 ```
-
-### 方式二：本地开发环境
-
-#### 后端启动
-```bash
-cd ToolsStation/backend
-pip install -r requirements.txt
-python app.py
+AI-Project/
+├── AI_Novel/           # AI 小说生成器项目
+│   ├── api/            # 后端服务
+│   ├── src/            # 前端应用
+│   └── README.md       # 项目文档
+├── ToolsStation/       # AI 资讯站项目
+│   ├── backend/        # 后端服务
+│   ├── frontend/       # 前端应用
+│   └── README.md       # 项目文档
+└── README.md           # 总说明文档
 ```
-
-#### 前端启动
-```bash
-cd ToolsStation/frontend
-npm install
-npm start
-```
-
-## 📚 文档导航
-
-| 模块 | 说明 | 文档 |
-|------|------|------|
-| **ToolsStation** | AI 工具集合 | [ToolsStation/README.md](./ToolsStation/README.md) |
-| **部署指南** | 部署配置说明 | [ToolsStation/DEPLOY.md](./ToolsStation/DEPLOY.md) |
-| **技术规范** | 项目技术规范 | [ToolsStation/spec.md](./ToolsStation/spec.md) |
-| **前端规范** | 前端重构规范 | [ToolsStation/spec_frontend_refactor.md](./ToolsStation/spec_frontend_refactor.md) |
-| **任务清单** | 开发任务列表 | [ToolsStation/tasks.md](./ToolsStation/tasks.md) |
-
-## 🛠️ 前端重构项目
-
-正在进行前端现代化重构，详见：
-- [前端重构规范](./ToolsStation/spec_frontend_refactor.md)
-- [前端重构任务](./ToolsStation/tasks_frontend_refactor.md)
-
-## ✅ 项目交付
-
-在项目交付前，请参考 [检查清单](./ToolsStation/checklist.md) 完成所有检查项。
-
-## 🔧 环境要求
-
-- **操作系统**: Linux / macOS / Windows
-- **Docker**: 最新版本（推荐）
-- **Python**: 3.8+
-- **Node.js**: 14+
-- **Git**: 2.20+
 
 ## 🤝 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
 
-### 开发流程
 1. Fork 本仓库
 2. 创建特性分支 (`git checkout -b feature/your-feature`)
 3. 提交更改 (`git commit -m 'Add your feature'`)
 4. 推送到分支 (`git push origin feature/your-feature`)
 5. 提交 Pull Request
 
-### 代码规范
-- 遵循项目规范文档
-- 运行测试确保代码质量
-- 提交前自我检查
-
 ## 📄 许可证
 
-此项目采用 MIT 许可证，详见 [LICENSE](./LICENSE) 文件。
+MIT License
 
 ## 👤 作者
 
 **buzhuyu**
 - GitHub: [@buzhuyu](https://github.com/buzhuyu)
-- 邮箱: 1213254159@qq.com
-
-## 📞 获取帮助
-
-- 📖 查看文档和规范
-- 🔍 在 Issues 中搜索相似问题
-- 💬 提交新的 Issue
-- 📧 联系项目维护者
-
-## 🔄 最近更新
-
-- ✅ 创建 ToolsStation 详细文档
-- ✅ 完善项目结构说明
-- 🔄 前端重构进行中
-
----
-
-**最后更新**: 2026-02-28 | **项目版本**: v1.0.0
