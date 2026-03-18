@@ -12,6 +12,10 @@
   功能：多源抓取、LLM摘要、飞书/微信推送、Web展示  
   技术：FastAPI、Next.js、SQLAlchemy、APScheduler
 
+- A-Pet（未开发完全，待后续完善）：桌面 AI 宠物原型  
+  目标：动画与交互、状态与记忆、场景感知、对话与任务  
+  现状：原型代码与资源已初步搭建，功能尚未完备，后续补齐
+
 ## 部署与运行方式
 
 两套业务独立运行，分别在各自目录进行开发与启动：
@@ -30,6 +34,10 @@
 
 ```
 AI-Project/
+├── A-Pet/             # 桌面 AI 宠物原型（未完成，待完善）
+│   ├── src/           # Python 源码（状态、记忆、动画、UI）
+│   ├── assets/        # 2D/3D 资源
+│   └── requirements.txt
 ├── AI_Novel/
 │   ├── api/           # Node.js 服务
 │   ├── src/           # 前端应用
