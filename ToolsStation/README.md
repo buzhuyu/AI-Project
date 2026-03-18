@@ -1,24 +1,21 @@
-# AI Tools Station (AI 资讯站)
+# ToolsStation
 
-这是一个基于 FastAPI 和 Next.js 构建的 AI 资讯聚合与推送平台。它能够抓取科技资讯，利用 LLM 生成中文摘要，并通过飞书或微信进行推送，同时提供现代化的 Web 界面进行浏览。
+基于 FastAPI 与 Next.js 的资讯聚合与推送平台，支持多源抓取、LLM 摘要与飞书/微信推送。采用前后端分离与本地脚本化部署。
 
-## ✨ 功能特性
+## 功能特性
 
-- **🕷️ 资讯抓取**: 支持从 Hacker News、GitHub Trending 等来源抓取最新科技资讯。
-- **🧠 智能摘要**: 集成 OpenAI 接口，自动生成高质量中文摘要。
-- **🛡️ 本地回退**: 如果 LLM 服务不可用，使用 `newspaper3k` 进行本地摘要提取。
-- **📢 多渠道推送**: 支持飞书 Webhook 推送，预留微信公众号推送接口。
-- **💻 现代化前端**: 基于 Next.js + Shadcn/UI 构建的响应式 Web 界面。
-- **🔌 RESTful API**: 提供标准的 API 服务。
+- 多源资讯抓取（如 Hacker News、GitHub Trending）
+- LLM 驱动摘要；支持不可用时本地回退
+- 多渠道推送（飞书 Webhook，预留微信公众号）
+- Web 界面与 RESTful API
 
-## 🛠️ 技术栈
+## 技术栈
 
-- **后端**: FastAPI, Python 3.10+, SQLAlchemy, APScheduler
-- **前端**: Next.js 14, React, Tailwind CSS, Shadcn/UI
-- **数据库**: SQLite (默认) / PostgreSQL
-- **AI**: OpenAI API / DeepSeek API
+- 后端：FastAPI、Python、SQLAlchemy、APScheduler
+- 前端：Next.js、React、Tailwind CSS
+- 数据库：SQLite（默认）/ PostgreSQL
 
-## 📂 目录结构
+## 目录结构
 
 ```
 ToolsStation/
@@ -36,23 +33,11 @@ ToolsStation/
 └── README.md           # 项目说明
 ```
 
-## 🚀 快速开始
+## 快速开始
 
-### 方式一：Docker 一键启动（推荐）
+### 本地分离运行
 
-如果你安装了 Docker，可以直接启动整个应用：
-
-```bash
-# 在 ToolsStation 目录下
-docker-compose up -d
-```
-访问地址：
-- 前端页面: `http://localhost:3000`
-- 后端 API: `http://localhost:8000/docs`
-
-### 方式二：本地开发运行
-
-#### 1. 后端服务 (Backend)
+#### 后端（backend）
 
 ```bash
 cd backend
@@ -60,9 +45,8 @@ cd backend
 # 安装依赖
 pip install -r requirements.txt
 
-# 配置环境变量 (复制示例并填入 Key)
-cp .env.example .env
-# 编辑 .env 文件...
+# 配置环境变量（系统环境变量，避免提交 .env）
+# 使用示例脚本：../../scripts/setup_env_example.ps1
 
 # 初始化数据库
 python init_db_script.py
@@ -71,7 +55,7 @@ python init_db_script.py
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### 2. 前端应用 (Frontend)
+#### 前端（frontend）
 
 ```bash
 cd frontend
@@ -79,28 +63,25 @@ cd frontend
 # 安装依赖
 npm install
 
-# 配置环境变量
-cp .env.example .env.local 
-# 或者手动创建 .env.local 并写入: NEXT_PUBLIC_API_URL=http://localhost:8000
+# 配置前端环境变量（公开）
+# 创建 .env.local 并写入:
+# NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # 启动开发服务器
 npm run dev
 ```
 
-## 📝 环境变量说明
+## 环境变量说明
 
-### 后端 (.env)
-| 变量名 | 说明 |
-|--------|------|
-| `OPENAI_API_KEY` | 用于生成智能摘要 (必填/可选) |
-| `OPENAI_BASE_URL` | 自定义 API 地址 (如使用 DeepSeek) |
-| `FEISHU_WEBHOOK_URL` | 飞书机器人 Webhook 地址 |
+### 后端（系统环境变量）
+- OPENAI_API_KEY：LLM 摘要密钥
+- OPENAI_BASE_URL：自定义 API 地址（如 DeepSeek）
+- OPENAI_MODEL：模型名称
+- FEISHU_WEBHOOK_URL：飞书机器人 Webhook
 
-### 前端 (.env.local)
-| 变量名 | 说明 |
-|--------|------|
-| `NEXT_PUBLIC_API_URL` | 后端 API 地址 (默认 http://localhost:8000) |
+### 前端（.env.local）
+- NEXT_PUBLIC_API_URL：后端地址（默认 http://localhost:8000）
 
-## 📄 许可证
+## 许可证
 
 MIT License
