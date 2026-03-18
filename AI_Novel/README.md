@@ -1,31 +1,20 @@
-# AI Novel Generator (AI 小说生成器)
+# AI Novel Generator
 
-一个基于多智能体（Multi-Agent）协作的自动化小说创作平台。通过 Writer, Editor, Reviewer 等多个 AI 智能体的协同工作，实现从大纲设计、章节创作、自动润色到质量把控的全流程自动化。
+多智能体协作的自动化小说创作平台，覆盖大纲、章节生成与质量把控。强调可维护性与专业化的本地部署。
 
-![React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Vite](https://img.shields.io/badge/Vite-6-purple) ![Supabase](https://img.shields.io/badge/Supabase-Database-green) ![OpenAI](https://img.shields.io/badge/AI-DeepSeek%2FOpenAI-orange)
+## 核心特性
 
-## ✨ 核心特性
+- 多智能体协作：Writer、Editor、Reviewer 等角色分工
+- 实时流式生成与富文本编辑
+- 风格学习、伏笔管理与世界观一致性检测
 
-- **🕵️ 多智能体协同**:
-    - **Writer Agent**: 负责正文创作，支持风格模仿。
-    - **Editor Agent**: 检查剧情连贯性和人物一致性。
-    - **Reviewer Agent**: 模拟读者反馈，提供评分和建议。
-- **📝 沉浸式创作**:
-    - **流式生成**: 实时展示 AI 创作过程。
-    - **富文本编辑**: 集成 TipTap 编辑器。
-    - **一键重写**: 支持随时重生成不满意的段落。
-- **🧠 智能辅助**:
-    - **风格学习**: 提取参考文风。
-    - **伏笔管理**: 自动追踪剧情伏笔。
-    - **世界观一致性**: 实时检测设定冲突。
+## 技术栈
 
-## 🛠️ 技术栈
+- 前端：React、TypeScript、Vite、Tailwind CSS
+- 服务：Node.js（Express）、Supabase
+- AI：OpenAI SDK（兼容 DeepSeek 等）
 
-- **前端**: React 18, TypeScript, Tailwind CSS, Vite
-- **后端**: Express (Node.js), Supabase (PostgreSQL + Vector)
-- **AI**: OpenAI SDK (兼容 DeepSeek, ChatGPT, Claude)
-
-## 📂 目录结构
+## 目录结构
 
 ```
 AI_Novel/
@@ -41,7 +30,7 @@ AI_Novel/
 └── package.json        # 项目配置
 ```
 
-## 🚀 快速开始
+## 快速开始
 
 ### 1. 安装依赖
 
@@ -58,18 +47,15 @@ npm install
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入 Supabase 和 AI 模型配置：
+编辑 `.env` 文件，仅保留前端可公开变量：
 
 ```env
-# Supabase 配置
+# Supabase（前端）
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-key
 
-# AI 模型配置 (默认 DeepSeek)
-DEEPSEEK_API_KEY=sk-your-api-key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-MODEL_NAME=deepseek-chat
+# 服务器端密钥请通过系统环境变量设置（不要写入 .env）
+# 使用示例脚本：scripts/setup_env_example.ps1
 ```
 
 ### 3. 初始化数据库
@@ -78,18 +64,26 @@ MODEL_NAME=deepseek-chat
 
 ### 4. 启动项目
 
-同时启动前端和后端服务：
+同时启动前端与服务端：
 
 ```bash
 npm run dev
 ```
 
-访问 `http://localhost:5173` 开始创作！
+访问 `http://localhost:5173` 使用前端；服务端默认端口 `3001`
 
-## 🤝 贡献指南
+### 5. 运行要求
+
+- Node.js 建议版本 ≥ 20（兼容库未来版本）
+
+### 6. 说明
+
+- 本项目与其他模块独立运行，按需分别启动
+
+## 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
 
-## 📄 许可证
+## 许可证
 
 MIT License

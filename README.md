@@ -1,63 +1,47 @@
-# AI Project Collection (AI 应用集合)
+# AI Project Collection
 
-一个专注于人工智能应用开发的综合项目库，汇集了多个实用的 AI 工具、算法实现和最佳实践范例。本项目旨在探索 AI 智能体（Agent）在不同领域的应用潜力。
+本仓库包含两个独立部署的工程模块，分别面向创作与资讯聚合场景。整体采用前后端分离与脚本化环境配置，强调安全与可维护性。
 
-## 📁 项目列表
+## 模块概览
 
-本项目目前包含以下核心模块：
+- AI_Novel：多智能体驱动的小说创作平台  
+  功能：大纲与章节生成、风格辅助、世界观管理  
+  技术：React、TypeScript、Vite、Supabase、Node.js
 
-### 1. 🤖 [AI Novel Generator (AI 小说生成器)](./AI_Novel/README.md)
+- ToolsStation：资讯抓取、摘要与推送平台  
+  功能：多源抓取、LLM摘要、飞书/微信推送、Web展示  
+  技术：FastAPI、Next.js、SQLAlchemy、APScheduler
 
-一个基于多智能体（Multi-Agent）协作的自动化小说创作平台。
-- **核心功能**: 大纲生成、章节创作、自动润色、世界观管理。
-- **技术栈**: React, TypeScript, Vite, Supabase, Express, OpenAI SDK.
-- **亮点**: 沉浸式流式生成体验，支持风格模仿和伏笔管理。
+## 部署与运行方式
 
-### 2. 📰 [AI Tools Station (AI 资讯站)](./ToolsStation/README.md)
+两套业务独立运行，分别在各自目录进行开发与启动：
 
-一个现代化的科技资讯聚合与推送平台。
-- **核心功能**: 多源资讯抓取、LLM 智能摘要、多渠道（飞书/微信）推送。
-- **技术栈**: FastAPI, Next.js, SQLAlchemy, APScheduler.
-- **亮点**: 自动化每日简报，前后端分离架构。
+- AI_Novel：详见 [AI_Novel/README.md](./AI_Novel/README.md)
+- ToolsStation：详见 [ToolsStation/README.md](./ToolsStation/README.md)
 
-## 🚀 快速开始
+## 环境变量与安全
 
-请进入各个子目录查看详细的安装和运行指南：
+- 服务器端密钥采用系统环境变量管理，示例脚本：scripts/setup_env_example.ps1  
+  请使用本机私有脚本 scripts/local/setup_env.ps1（已被忽略提交）设置真实值
+- 前端仅保留必要的公开变量（如 VITE_SUPABASE_ANON_KEY、NEXT_PUBLIC_API_URL）
+- 严禁将服务端密钥写入前端环境或提交至仓库
 
-- **AI Novel Generator**: [查看文档](./AI_Novel/README.md)
-- **AI Tools Station**: [查看文档](./ToolsStation/README.md)
-
-## 📂 目录结构
+## 目录结构
 
 ```
 AI-Project/
-├── AI_Novel/           # AI 小说生成器项目
-│   ├── api/            # 后端服务
-│   ├── src/            # 前端应用
-│   └── README.md       # 项目文档
-├── ToolsStation/       # AI 资讯站项目
-│   ├── backend/        # 后端服务
-│   ├── frontend/       # 前端应用
-│   └── README.md       # 项目文档
-└── README.md           # 总说明文档
+├── AI_Novel/
+│   ├── api/           # Node.js 服务
+│   ├── src/           # 前端应用
+│   └── README.md
+├── ToolsStation/
+│   ├── backend/       # FastAPI 服务
+│   ├── frontend/      # Next.js 应用
+│   └── README.md
+└── scripts/           # 脚本（示例与私有）
 ```
 
-## 🤝 贡献指南
+## 贡献与许可证
 
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/your-feature`)
-3. 提交更改 (`git commit -m 'Add your feature'`)
-4. 推送到分支 (`git push origin feature/your-feature`)
-5. 提交 Pull Request
-
-## 📄 许可证
-
-MIT License
-
-## 👤 作者
-
-**buzhuyu**
-- GitHub: [@buzhuyu](https://github.com/buzhuyu)
-# Force refresh for frontend conversion
+- 贡献流程：Fork → 分支开发 → 提交 PR
+- 许可证：MIT License
