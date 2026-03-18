@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm Sci-Fi (Dune/Solarpunk style) - Light Mode */
+    --background: 40 20% 97%;
+    --foreground: 20 14% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 4%;
+    --primary: 35 90% 50%; /* Amber/Orange */
+    --primary-foreground: 60 9% 98%;
+    --secondary: 40 10% 94%;
+    --secondary-foreground: 24 10% 10%;
+    --muted: 40 10% 94%;
+    --muted-foreground: 25 5% 45%;
+    --accent: 35 90% 50%;
+    --accent-foreground: 24 10% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 60 9% 98%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 35 90% 50%;
+    --radius: 0.3rem;
+  }
+ 
+  .dark {
+    /* Warm Sci-Fi (Dune/Solarpunk style) - Dark Mode */
+    --background: 20 14% 4%; /* Dark Brown/Black */
+    --foreground: 40 20% 98%;
+    --card: 20 14% 6%;
+    --card-foreground: 40 20% 98%;
+    --popover: 20 14% 6%;
+    --popover-foreground: 40 20% 98%;
+    --primary: 35 90% 50%; /* Amber/Gold Neon */
+    --primary-foreground: 20 14% 4%;
+    --secondary: 24 10% 14%;
+    --secondary-foreground: 40 20% 98%;
+    --muted: 24 10% 14%;
+    --muted-foreground: 30 10% 60%;
+    --accent: 24 10% 14%;
+    --accent-foreground: 40 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 40 20% 98%;
+    --border: 24 10% 14%;
+    --input: 24 10% 14%;
+    --ring: 35 90% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom Sci-Fi Scrollbar - Gold */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background)); 
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary)); 
+}
+
+/* Warm Glow Effects */
+.glow-text {
+  text-shadow: 0 0 10px hsl(var(--primary) / 0.5);
+}
+.glow-border {
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.2);
+}

@@ -1,0 +1,1 @@
+ALTER TABLE chapters ADD COLUMN IF NOT EXISTS summary TEXT;

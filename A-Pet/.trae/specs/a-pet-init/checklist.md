@@ -1,0 +1,13 @@
+- [x] Python environment is set up and dependencies are installed.
+- [x] Application launches without errors.
+- [x] A transparent, frameless pet window appears on the desktop.
+- [x] The pet window stays on top of other windows.
+- [x] The pet can be dragged smoothly with the mouse.
+- [x] Animations play correctly for Idle state.
+- [x] Clicking the pet triggers an interaction animation.
+- [x] Right-click menu appears and allows "Feed" and "Play" actions.
+- [x] "Feed" action increases Hunger value (visible in logs or debug UI).
+- [x] Pet state (Hunger/Mood) is saved to file and restored upon restart.
+- [x] Chat bubble appears correctly near the pet.
+- [x] AI responds to user input (simulated or real API) in a "cute" persona.
+- [x] Application exits cleanly via system tray.
