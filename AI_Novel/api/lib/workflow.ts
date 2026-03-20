@@ -5,6 +5,16 @@ import { worldviewAgent } from '../agents/worldview.js';
 import { revisionAgent } from '../agents/revision.js';
 import { proofreader, editorChief, editorPlot, editorCharacter, editorWorld, readerCasual, readerCritic, readerEmotional, readerMarket, logicChecker, styleChecker, consistencyChecker, ReviewResult } from '../agents/reviewers.js';
 
+export interface ChapterContext {
+    chapterId: string;
+    chapter: any;
+    projectId: string;
+    chapterNum: number;
+    currentVersion: number;
+    prevContent?: string;
+    existingTitles: string[];
+}
+
 export class WorkflowManager {
   
   constructor() {
@@ -91,169 +101,82 @@ export class WorkflowManager {
       }
   }
 
-  async handleChapterConfirmation(chapterId: string, enableAutoNext: boolean = true) {
-    console.log(`[Workflow] Starting workflow for chapter ${chapterId} (AutoNext: ${enableAutoNext})`);
-    
-    // 1. Get Chapter & Project Info
-    const { data: chapter } = await supabase.from('chapters').select('*').eq('id', chapterId).single();
-    if (!chapter) return;
-    const projectId = chapter.project_id;
-    const chapterNum = chapter.chapter_number;
-    const currentVersion = chapter.version || 1;
-    const MAX_REVISIONS = 3;
+  async handleChapterConfirmation(chapterId: string, enableAutoNext: boolean = true, startFromStage?: string) {
+      console.log(`[Workflow] Starting workflow for chapter ${chapterId} (AutoNext: ${enableAutoNext}, StartStage: ${startFromStage || 'auto'})`);
+      
+      const ctx = await this.fetchContext(chapterId);
+      if (!ctx) return;
+      const MAX_REVISIONS = 3;
 
-    // Fetch previous chapter content for continuity check
-    let prevContent = undefined;
-    if (chapterNum > 1) {
-        const { data: prev } = await supabase.from('chapters')
-            .select('content')
-            .eq('project_id', projectId)
-            .eq('chapter_number', chapterNum - 1)
-            .single();
-        if (prev) prevContent = prev.content;
-    }
+      // Determine initial stage
+      let currentStage = startFromStage || 'reviewing_agents';
 
-    // Fetch existing titles for duplication check
-    const { data: otherChapters } = await supabase
-        .from('chapters')
-        .select('title')
-        .eq('project_id', projectId)
-        .neq('id', chapterId); // Exclude current chapter
-    
-    const existingTitles = otherChapters?.map(c => c.title).filter((t): t is string => !!t) || [];
+      // --- Stage 1: Parallel QA ---
+      if (currentStage === 'reviewing_agents') {
+          await this.updateStatus(chapterId, 'reviewing_agents');
+          const qaResults = await this.runAgentReviews(ctx);
+          const { failed } = this.aggregateAndDecideQA(qaResults);
+          
+          if (failed.length > 0) {
+              if (ctx.currentVersion >= MAX_REVISIONS) {
+                  console.warn(`[Workflow] Chapter ${chapterId} rejected by agents but max revisions (${MAX_REVISIONS}) reached. Forcing pass.`);
+              } else {
+                  const combinedFeedback = failed.map(r => `【${r.agent}反馈】${r.feedback}`).join('\n\n');
+                  console.log(`[Workflow] Chapter ${chapterId} rejected by agents. Revisions needed (Attempt ${ctx.currentVersion}/${MAX_REVISIONS}).`);
+                  await this.triggerRevision(chapterId, ctx.projectId, ctx.chapterNum, combinedFeedback, ctx.currentVersion + 1);
+                  return;
+              }
+          }
+          currentStage = 'editing';
+      }
 
-    // --- Parallel Review Phase 1: Quality Assurance ---
-    await this.updateStatus(chapterId, 'reviewing_agents'); // New status for parallel review
+      // --- Stage 2: Editorial Board ---
+      if (currentStage === 'editing') {
+          if (ctx.chapterNum === 1 || ctx.chapterNum % 5 === 0) {
+              await this.updateStatus(chapterId, 'editing');
+              const editorResults = await this.runEditorialBoard(ctx);
+              const { failed } = this.aggregateAndDecideEditors(editorResults);
 
-    // Run all agents in parallel to save time
-    const [proofResult, logicResult, styleResult, consistencyResult] = await Promise.all([
-        proofreader.review(chapter.content),
-        logicChecker.review(chapter.content),
-        styleChecker.review(chapter.content),
-        consistencyChecker.review(chapter.content, prevContent, existingTitles)
-    ]);
+              if (failed.length > 0) {
+                   if (ctx.currentVersion >= MAX_REVISIONS) {
+                       console.warn(`[Workflow] Chapter ${chapterId} rejected by editors but max revisions reached. Forcing pass.`);
+                   } else {
+                       const editorFeedback = failed.map(r => `【${r.agent}意见】${r.feedback}`).join('\n\n');
+                       await this.triggerRevision(chapterId, ctx.projectId, ctx.chapterNum, editorFeedback, ctx.currentVersion + 1);
+                       return;
+                   }
+              }
+          }
+          currentStage = 'reading';
+      }
 
-    // Log all reviews
-    await this.logReview(chapterId, 'proofreader', proofResult);
-    await this.logReview(chapterId, 'logic_checker', logicResult);
-    await this.logReview(chapterId, 'style_checker', styleResult);
-    await this.logReview(chapterId, 'consistency_checker', consistencyResult);
+      // --- Stage 3: Reader Group ---
+      if (currentStage === 'reading') {
+          await this.updateStatus(chapterId, 'reading');
+          const { marketResult } = await this.runReaderGroup(ctx);
 
-    // Aggregate results
-    const failedReviews = [];
-    if (!proofResult.passed) failedReviews.push({ agent: '校对', ...proofResult });
-    if (!logicResult.passed) failedReviews.push({ agent: '逻辑', ...logicResult });
-    if (!styleResult.passed) failedReviews.push({ agent: '修辞', ...styleResult });
-    if (!consistencyResult.passed) failedReviews.push({ agent: '连贯性', ...consistencyResult });
+          if (!marketResult.passed) {
+              if (ctx.currentVersion >= MAX_REVISIONS) {
+                  console.warn(`[Workflow] Chapter ${chapterId} rejected by market reader but max revisions reached. Forcing pass.`);
+              } else {
+                  await this.triggerRevision(chapterId, ctx.projectId, ctx.chapterNum, `【市场反馈不佳】${marketResult.feedback}`, ctx.currentVersion + 1);
+                  return;
+              }
+          }
+          currentStage = 'completed';
+      }
 
-    if (failedReviews.length > 0) {
-        if (currentVersion >= MAX_REVISIONS) {
-            console.warn(`[Workflow] Chapter ${chapterId} rejected by agents but max revisions (${MAX_REVISIONS}) reached. Forcing pass.`);
-            // Log warning but continue
-        } else {
-            const combinedFeedback = failedReviews.map(r => `【${r.agent}反馈】${r.feedback}`).join('\n\n');
-            console.log(`[Workflow] Chapter ${chapterId} rejected by agents. Revisions needed (Attempt ${currentVersion}/${MAX_REVISIONS}).`);
-            await this.triggerRevision(chapterId, projectId, chapterNum, combinedFeedback, currentVersion + 1);
-            return;
-        }
-    }
+      // --- Stage 4: Completion & Next Chapter ---
+      if (currentStage === 'completed') {
+          await this.updateStatus(chapterId, 'completed');
+          console.log(`[Workflow] Chapter ${chapterId} completed successfully.`);
 
-    // 3. Trigger Editor (Every 5 chapters OR First chapter)
-    // First chapter is crucial, so check it too
-    if (chapterNum === 1 || chapterNum % 5 === 0) {
-        await this.updateStatus(chapterId, 'editing');
-        
-        // Run Editorial Board
-        const [chiefResult, plotResult, charResult, worldResult] = await Promise.all([
-            editorChief.review("Project Context Placeholder", chapter.content),
-            editorPlot.review("Project Context Placeholder", chapter.content),
-            editorCharacter.review("Project Context Placeholder", chapter.content),
-            editorWorld.review("Project Context Placeholder", chapter.content)
-        ]);
+          await this.generateSummary(ctx);
 
-        await this.logReview(chapterId, 'editor_chief', chiefResult);
-        await this.logReview(chapterId, 'editor_plot', plotResult);
-        await this.logReview(chapterId, 'editor_character', charResult);
-        await this.logReview(chapterId, 'editor_world', worldResult);
-
-        const failedEditors = [];
-        if (!chiefResult.passed) failedEditors.push({ agent: '主编', ...chiefResult });
-        if (!plotResult.passed) failedEditors.push({ agent: '剧情编辑', ...plotResult });
-        if (!charResult.passed) failedEditors.push({ agent: '角色编辑', ...charResult });
-        if (!worldResult.passed) failedEditors.push({ agent: '设定编辑', ...worldResult });
-
-        if (failedEditors.length > 0) {
-             if (currentVersion >= MAX_REVISIONS) {
-                 console.warn(`[Workflow] Chapter ${chapterId} rejected by editors but max revisions reached. Forcing pass.`);
-             } else {
-                 const editorFeedback = failedEditors.map(r => `【${r.agent}意见】${r.feedback}`).join('\n\n');
-                 await this.triggerRevision(chapterId, projectId, chapterNum, editorFeedback, currentVersion + 1);
-                 return;
-             }
-        }
-    }
-
-    // 4. Trigger Reader Group (Market Validation)
-    await this.updateStatus(chapterId, 'reading');
-    
-    const [casualResult, criticResult, emotionalResult, marketResult] = await Promise.all([
-        readerCasual.review(chapter.content),
-        readerCritic.review(chapter.content),
-        readerEmotional.review(chapter.content),
-        readerMarket.review(chapter.content)
-    ]);
-
-    await this.logReview(chapterId, 'reader_casual', casualResult);
-    await this.logReview(chapterId, 'reader_critic', criticResult);
-    await this.logReview(chapterId, 'reader_emotional', emotionalResult);
-    await this.logReview(chapterId, 'reader_market', marketResult);
-
-    // Strict mode: If Market Reader says NO, we revise.
-    if (!marketResult.passed) {
-        if (currentVersion >= MAX_REVISIONS) {
-            console.warn(`[Workflow] Chapter ${chapterId} rejected by market reader but max revisions reached. Forcing pass.`);
-        } else {
-            await this.triggerRevision(chapterId, projectId, chapterNum, `【市场反馈不佳】${marketResult.feedback}`, currentVersion + 1);
-            return;
-        }
-    }
-
-    // 6. Start Next Chapter (If not already exists)
-    // IMPORTANT: This now runs independently of the review result if we want pipeline mode.
-    // But this function `handleChapterConfirmation` is called when User clicks "Confirm".
-    // So if it passes, we mark completed and start next.
-    await this.updateStatus(chapterId, 'completed');
-    console.log(`[Workflow] Chapter ${chapterId} completed successfully.`);
-
-    // Generate Summary
-    try {
-        console.log(`[Workflow] Generating summary for confirmed chapter ${chapterId}...`);
-        const summary = await summaryAgent.generateSummary(chapter.content);
-        if (summary) {
-            await this.logReview(chapterId, 'summary_agent', {
-                passed: true,
-                score: 10,
-                feedback: summary,
-                issues: [],
-                suggestions: []
-            });
-        }
-    } catch (err) {
-        console.error('[Workflow] Failed to generate summary:', err);
-    }
-
-    if (enableAutoNext) {
-        // Check AI write limit
-        const { data: project } = await supabase.from('projects').select('settings').eq('id', projectId).single();
-        const aiWriteLimit = project?.settings?.aiWriteCount;
-        
-        if (aiWriteLimit && chapterNum >= aiWriteLimit) {
-            console.log(`[Workflow] AI write limit (${aiWriteLimit}) reached after confirmation. Stopping auto-generation.`);
-            await supabase.from('projects').update({ status: 'paused' }).eq('id', projectId);
-        } else {
-            await this.startNextChapter(projectId, chapterNum);
-        }
-    }
+          if (enableAutoNext) {
+              await this.scheduleNextChapter(ctx);
+          }
+      }
   }
 
   // New method: Allow user to force start next chapter even if current is revising
@@ -265,42 +188,11 @@ export class WorkflowManager {
   async manualProofread(chapterId: string) {
       console.log(`[Workflow] Manual full review for ${chapterId}`);
       
-      const { data: chapter } = await supabase.from('chapters').select('*').eq('id', chapterId).single();
-      if (!chapter) throw new Error('Chapter not found');
-
-      // Fetch previous chapter content for continuity check
-      let prevContent = undefined;
-      if (chapter.chapter_number > 1) {
-          const { data: prev } = await supabase.from('chapters')
-              .select('content')
-              .eq('project_id', chapter.project_id)
-              .eq('chapter_number', chapter.chapter_number - 1)
-              .single();
-          if (prev) prevContent = prev.content;
-      }
-
-      // Fetch existing titles for duplication check
-      const { data: otherChapters } = await supabase
-          .from('chapters')
-          .select('title')
-          .eq('project_id', chapter.project_id)
-          .neq('id', chapterId);
-      
-      const existingTitles = otherChapters?.map(c => c.title).filter((t): t is string => !!t) || [];
+      const ctx = await this.fetchContext(chapterId);
+      if (!ctx) throw new Error('Chapter not found');
 
       // Run ALL parallel agents for manual check
-      const [proofResult, logicResult, styleResult, consistencyResult] = await Promise.all([
-        proofreader.review(chapter.content),
-        logicChecker.review(chapter.content),
-        styleChecker.review(chapter.content),
-        consistencyChecker.review(chapter.content, prevContent, existingTitles)
-      ]);
-      
-      // Save review logs
-      await this.logReview(chapterId, 'proofreader_manual', proofResult);
-      await this.logReview(chapterId, 'logic_manual', logicResult);
-      await this.logReview(chapterId, 'style_manual', styleResult);
-      await this.logReview(chapterId, 'consistency_manual', consistencyResult);
+      await this.runAgentReviews(ctx, true);
       
       return { success: true };
   }
@@ -317,8 +209,7 @@ export class WorkflowManager {
       if (reviewingChapters && reviewingChapters.length > 0) {
           console.log(`[WorkflowManager] Found ${reviewingChapters.length} interrupted reviews. Restarting...`);
           for (const chapter of reviewingChapters) {
-              // Restart workflow
-              this.handleChapterConfirmation(chapter.id).catch(e => console.error(e));
+              this.handleChapterConfirmation(chapter.id, true, 'reviewing_agents').catch(e => console.error(e));
           }
       }
 
@@ -331,23 +222,142 @@ export class WorkflowManager {
       if (editingChapters && editingChapters.length > 0) {
          console.log(`[WorkflowManager] Found ${editingChapters.length} interrupted editing tasks. Restarting...`);
          for (const chapter of editingChapters) {
-            // Trigger Editor logic again
-             // NOTE: We need to replicate the logic inside handleChapterConfirmation
-             // Ideally refactor logic into granular methods. For now, restarting the whole confirmation flow is safest/easiest 
-             // although it repeats the proofreading.
-             // Let's just restart the whole flow to be safe.
-             this.handleChapterConfirmation(chapter.id).catch(e => console.error(e));
+             this.handleChapterConfirmation(chapter.id, true, 'editing').catch(e => console.error(e));
          }
       }
 
       // Recover 'reading' (Reader Agent)
       const { data: readingChapters } = await supabase.from('chapters').select('*').eq('status', 'reading');
        if (readingChapters && readingChapters.length > 0) {
-           // Restart whole flow
            for (const chapter of readingChapters) {
-               this.handleChapterConfirmation(chapter.id).catch(e => console.error(e));
+               this.handleChapterConfirmation(chapter.id, true, 'reading').catch(e => console.error(e));
            }
        }
+  }
+
+  private async fetchContext(chapterId: string): Promise<ChapterContext | null> {
+      const { data: chapter } = await supabase.from('chapters').select('*').eq('id', chapterId).single();
+      if (!chapter) return null;
+      const projectId = chapter.project_id;
+      const chapterNum = chapter.chapter_number;
+      const currentVersion = chapter.version || 1;
+
+      let prevContent = undefined;
+      if (chapterNum > 1) {
+          const { data: prev } = await supabase.from('chapters')
+              .select('content')
+              .eq('project_id', projectId)
+              .eq('chapter_number', chapterNum - 1)
+              .single();
+          if (prev) prevContent = prev.content;
+      }
+
+      const { data: otherChapters } = await supabase
+          .from('chapters')
+          .select('title')
+          .eq('project_id', projectId)
+          .neq('id', chapterId);
+      
+      const existingTitles = otherChapters?.map(c => c.title).filter((t): t is string => !!t) || [];
+
+      return { chapterId, chapter, projectId, chapterNum, currentVersion, prevContent, existingTitles };
+  }
+
+  private async runAgentReviews(ctx: ChapterContext, isManual: boolean = false) {
+      const [proofResult, logicResult, styleResult, consistencyResult] = await Promise.all([
+          proofreader.review(ctx.chapter.content),
+          logicChecker.review(ctx.chapter.content),
+          styleChecker.review(ctx.chapter.content),
+          consistencyChecker.review(ctx.chapter.content, ctx.prevContent, ctx.existingTitles)
+      ]);
+
+      const suffix = isManual ? '_manual' : '';
+      await this.logReview(ctx.chapterId, `proofreader${suffix}`, proofResult);
+      await this.logReview(ctx.chapterId, `logic_checker${suffix}`, logicResult);
+      await this.logReview(ctx.chapterId, `style_checker${suffix}`, styleResult);
+      await this.logReview(ctx.chapterId, `consistency_checker${suffix}`, consistencyResult);
+
+      return { proofResult, logicResult, styleResult, consistencyResult };
+  }
+
+  private aggregateAndDecideQA(results: any) {
+      const failedReviews = [];
+      if (!results.proofResult.passed) failedReviews.push({ agent: '校对', ...results.proofResult });
+      if (!results.logicResult.passed) failedReviews.push({ agent: '逻辑', ...results.logicResult });
+      if (!results.styleResult.passed) failedReviews.push({ agent: '修辞', ...results.styleResult });
+      if (!results.consistencyResult.passed) failedReviews.push({ agent: '连贯性', ...results.consistencyResult });
+      return { failed: failedReviews };
+  }
+
+  private async runEditorialBoard(ctx: ChapterContext) {
+      const [chiefResult, plotResult, charResult, worldResult] = await Promise.all([
+          editorChief.review("Project Context Placeholder", ctx.chapter.content),
+          editorPlot.review("Project Context Placeholder", ctx.chapter.content),
+          editorCharacter.review("Project Context Placeholder", ctx.chapter.content),
+          editorWorld.review("Project Context Placeholder", ctx.chapter.content)
+      ]);
+
+      await this.logReview(ctx.chapterId, 'editor_chief', chiefResult);
+      await this.logReview(ctx.chapterId, 'editor_plot', plotResult);
+      await this.logReview(ctx.chapterId, 'editor_character', charResult);
+      await this.logReview(ctx.chapterId, 'editor_world', worldResult);
+
+      return { chiefResult, plotResult, charResult, worldResult };
+  }
+
+  private aggregateAndDecideEditors(results: any) {
+      const failedEditors = [];
+      if (!results.chiefResult.passed) failedEditors.push({ agent: '主编', ...results.chiefResult });
+      if (!results.plotResult.passed) failedEditors.push({ agent: '剧情编辑', ...results.plotResult });
+      if (!results.charResult.passed) failedEditors.push({ agent: '角色编辑', ...results.charResult });
+      if (!results.worldResult.passed) failedEditors.push({ agent: '设定编辑', ...results.worldResult });
+      return { failed: failedEditors };
+  }
+
+  private async runReaderGroup(ctx: ChapterContext) {
+      const [casualResult, criticResult, emotionalResult, marketResult] = await Promise.all([
+          readerCasual.review(ctx.chapter.content),
+          readerCritic.review(ctx.chapter.content),
+          readerEmotional.review(ctx.chapter.content),
+          readerMarket.review(ctx.chapter.content)
+      ]);
+
+      await this.logReview(ctx.chapterId, 'reader_casual', casualResult);
+      await this.logReview(ctx.chapterId, 'reader_critic', criticResult);
+      await this.logReview(ctx.chapterId, 'reader_emotional', emotionalResult);
+      await this.logReview(ctx.chapterId, 'reader_market', marketResult);
+
+      return { marketResult };
+  }
+
+  private async generateSummary(ctx: ChapterContext) {
+      try {
+          console.log(`[Workflow] Generating summary for confirmed chapter ${ctx.chapterId}...`);
+          const summary = await summaryAgent.generateSummary(ctx.chapter.content);
+          if (summary) {
+              await this.logReview(ctx.chapterId, 'summary_agent', {
+                  passed: true,
+                  score: 10,
+                  feedback: summary,
+                  issues: [],
+                  suggestions: []
+              });
+          }
+      } catch (err) {
+          console.error('[Workflow] Failed to generate summary:', err);
+      }
+  }
+
+  private async scheduleNextChapter(ctx: ChapterContext) {
+      const { data: project } = await supabase.from('projects').select('settings').eq('id', ctx.projectId).single();
+      const aiWriteLimit = project?.settings?.aiWriteCount;
+      
+      if (aiWriteLimit && ctx.chapterNum >= aiWriteLimit) {
+          console.log(`[Workflow] AI write limit (${aiWriteLimit}) reached after confirmation. Stopping auto-generation.`);
+          await supabase.from('projects').update({ status: 'paused' }).eq('id', ctx.projectId);
+      } else {
+          await this.startNextChapter(ctx.projectId, ctx.chapterNum);
+      }
   }
 
   private async updateStatus(chapterId: string, status: string) {
